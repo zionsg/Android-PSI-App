@@ -3,6 +3,7 @@ apply plugin: 'com.android.application'
 android {
     compileSdkVersion 26
     buildToolsVersion "26.0.2"
+
     defaultConfig {
         applicationId "sg.zion.androidpsiapp"
         minSdkVersion 21
@@ -11,10 +12,18 @@ android {
         versionName "1.0"
         testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
     }
+
     buildTypes {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+        }
+
+        buildTypes.each {
+            // API keys stored in gradle.properties
+            it.buildConfigField 'String', 'API_KEY_GOOGLE_MAPS', apiKeyGoogleMaps
+            it.buildConfigField 'String', 'API_KEY_DATA_GOV_SG', apiKeyDataGovSg
+            it.resValue 'string', 'API_KEY_GOOGLE_MAPS', apiKeyGoogleMaps
         }
     }
 }
