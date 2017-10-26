@@ -6,6 +6,9 @@
   android:layout_width="match_parent"
   android:layout_height="match_parent"
   tools:context="sg.zion.androidpsiapp.MapsActivity"
-  map:cameraTargetLat="1.290270"
-  map:cameraTargetLng="103.851959"
-  map:cameraZoom="10" />
+  map:cameraTargetLat="1.3521"
+  map:cameraTargetLng="103.8198"
+  map:cameraZoom="10.5"
+  map:mapType="normal"
+  map:uiCompass="false"
+  map:uiZoomControls="true" />
