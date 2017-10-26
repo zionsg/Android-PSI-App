@@ -22,6 +22,12 @@ import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.GoogleMap.OnMyLocationButtonClickListener;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
+import com.google.android.gms.maps.model.BitmapDescriptorFactory;
+import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.LatLngBounds;
+import com.google.android.gms.maps.model.Marker;
+import com.google.android.gms.maps.model.MarkerOptions;
+import com.google.maps.android.ui.IconGenerator;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -39,14 +45,29 @@ public class MapsActivity extends FragmentActivity
         implements OnMyLocationButtonClickListener,
         OnMapReadyCallback {
 
+    /**
+     * Base url for data.gov.sg API
+     */
     private String apiUrl = "https://api.data.gov.sg/v1/environment/psi";
 
+    /**
+     * API key for data.gov.sg
+     */
     private String apiKey = BuildConfig.API_KEY_DATA_GOV_SG;
 
+    /**
+     * List of regions, excluding "national"
+     */
     private String[] regionNames = {"east", "west", "north", "south", "central"};
 
+    /**
+     * Map instance
+     */
     private GoogleMap mMap;
 
+    /**
+     * Initial creation of the fragment
+     */
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -59,10 +80,10 @@ public class MapsActivity extends FragmentActivity
     }
 
     /**
+     * Callback triggered when map is ready to be used.
+     *
      * Manipulates the map once available.
-     * This callback is triggered when the map is ready to be used.
-     * This is where we can add markers or lines, add listeners or move the camera. In this case,
-     * we just add a marker near Sydney, Australia.
+     * This is where we can add markers or lines, add listeners or move the camera.
      * If Google Play services is not installed on the device, the user will be prompted to install
      * it inside the SupportMapFragment. This method will only be triggered once the user has
      * installed Google Play services and returned to the app.
@@ -71,24 +92,38 @@ public class MapsActivity extends FragmentActivity
     public void onMapReady(GoogleMap googleMap) {
         mMap = googleMap;
 
+        // Call API to update map - location permissions not needed for this
+        callApi();
+
+        // Note the vendor's layer on top of the OS may precede this and show its notice instead
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
                 == PackageManager.PERMISSION_GRANTED) {
             mMap.setMyLocationEnabled(true);
             mMap.setOnMyLocationButtonClickListener(this);
         } else {
             // Show rationale and request permission.
+            showDialog(
+                    "Location Permissions Error",
+                    "Please enable location permissions for this app in Settings."
+            );
         }
     }
 
+    /**
+     * Callback triggered when My Location button in map is clicked
+     */
     @Override
     public boolean onMyLocationButtonClick() {
-        callApi();
-
         // Return false so that we don't consume the event and the default behavior still occurs
         // (the camera animates to the user's current position).
         return false;
     }
 
+    /**
+     * Call data.gov.sg API for PSI readings
+     *
+     * Success response is passed to updateMap().
+     */
     protected void callApi() {
         RequestQueue queue = Volley.newRequestQueue(this);
 
@@ -112,14 +147,18 @@ public class MapsActivity extends FragmentActivity
                     @Override
                     public void onResponse(JSONObject response) {
                         Log.d("callApi", "Response: " + response.toString());
-                        Map<String, HashMap<String, Double>> result = parseResponse(response);
+                        updateMap(response);
                     }
                 },
                 new Response.ErrorListener() {
                     @Override
                     public void onErrorResponse(VolleyError error) {
                         Log.d("callApi", "Error: " + error.toString());
-                        Toast.makeText(MapsActivity.this, "Error getting PSI updates", Toast.LENGTH_LONG).show();
+                        Toast.makeText(
+                                MapsActivity.this,
+                                "Error getting PSI updates. Please check connectivity.",
+                                Toast.LENGTH_LONG
+                        ).show();
                     }
                 }
         ) {
@@ -136,10 +175,44 @@ public class MapsActivity extends FragmentActivity
         queue.add(jsonRequest);
     }
 
+    /**
+     * Update map with PSI readings
+     */
+    protected void updateMap(JSONObject response) {
+        Map<String, HashMap<String, Double>> result = parseResponse(response);
+
+        IconGenerator iconFactory = new IconGenerator(this);
+        iconFactory.setStyle(IconGenerator.STYLE_BLUE);
+
+        String name;
+        HashMap<String, Double> info;
+        LatLng position;
+        String reading;
+        String text;
+        for (Map.Entry<String, HashMap<String, Double>> entry : result.entrySet()) {
+            name = entry.getKey();
+            name = name.substring(0, 1).toUpperCase() + name.substring(1);
+            info = (HashMap<String, Double>) entry.getValue();
+            position = new LatLng(info.get("latitude"), info.get("longitude"));
+            reading = String.format("%.0f", info.get("reading")); // show reading as int, not double
+            text = name + "\n" + "PSI: " + reading;
+
+            mMap.addMarker(new MarkerOptions()
+                    .position(position)
+                    .anchor(iconFactory.getAnchorU(), iconFactory.getAnchorV())
+                    .icon(BitmapDescriptorFactory.fromBitmap(iconFactory.makeIcon(text)))
+            );
+        }
+    }
+
+    /**
+     * Parse API response
+     */
     protected Map<String, HashMap<String, Double>> parseResponse(JSONObject response) {
         Map<String, HashMap<String, Double>> result =
                 new HashMap<String, HashMap<String, Double>>();
 
+        // Get PSI readings for all regions
         JSONArray items = response.optJSONArray("items");
         JSONObject item = (null == items || 0 == items.length())
                 ? null
@@ -165,6 +238,7 @@ public class MapsActivity extends FragmentActivity
             }
         }
 
+        // Collate latlong and PSI reading for each region
         JSONArray regions = response.optJSONArray("region_metadata");
         JSONObject region;
         String name;
@@ -199,6 +273,9 @@ public class MapsActivity extends FragmentActivity
         return result;
     }
 
+    /**
+     * Helper method to show an alert dialog
+     */
     protected void showDialog(String title, String message) {
         new AlertDialog.Builder(this)
                 .setTitle("Dialog")
