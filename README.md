@@ -1,7 +1,21 @@
 # Android PSI App
 
+## To-do List
+A list of things not done yet due to time constraints:
+- Refactoring of code. Functions for manipulating the map, calling the API, parsing the response should reside in their own classes.
+- More fine-grained error reporting. If an API call fails, it could be due to API key, network, server, permissions, etc.
+- Unit tests.
+- Adding of a field to change the date for the PSI readings.
+- Additional information when the map is zoomed in?
+- Menu, which can contain information on the app, help and links.
+- App icon.
+
 ## Requirements
 - Android >= 5.0 (Lollipop)
+
+## Installation
+- Copy `gradle.properties.dist` to `gradle.properties`. Fill in the API keys for Google Maps and data.gov.sg. Links to getting the keys are provided in the comments.
+- Open the project in Android Studio and run.
 
 ## References
 - MyTransport app
@@ -42,3 +56,7 @@
     * Call data.gov.sg API
   + 23:10 - 00:50 (1h 40m)
     * Parse JSON response from data.gov.sg
+- Thu 26 Oct 2017
+  + 21:25
+    * Create .dist for gradle properties
+    * Put to-do list and installation instructions in README.md
